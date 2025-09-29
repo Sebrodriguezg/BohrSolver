@@ -1,1 +1,1 @@
-juas juas 
+from .atom import BohrAtom
