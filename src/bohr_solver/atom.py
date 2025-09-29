@@ -29,6 +29,10 @@ class BohrAtom:
         self.c = 299792458           # Speed of light (m/s)
         self.a0 = 5.29177210903e-11   # Bohr radius (m)
 
+                # --- Derived Constants ---
+        # Rydberg constant for an infinitely heavy nucleus (m⁻¹)
+        self.R = (self.m_e * self.e**4) / (8 * self.epsilon_0**2 * self.h**3 * self.c)
+
     def calculate_energy_level(self, n: int, unit: str = 'eV') -> float:
         """
         Calculates the energy of an electron in a given quantum level 'n'.
