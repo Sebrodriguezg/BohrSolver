@@ -22,7 +22,7 @@ dependencies = [
 requires-python = ">=3.8"
 
 [tool.setuptools.packages.find]
-include = ["BohrSolver*"]
+include = ["src"]
 
 [project.urls]
 Homepage = "https://github.com/Sebrodriguezg/BohrSolver"

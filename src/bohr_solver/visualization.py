@@ -1,92 +1,85 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from . import calculations
 
-def plot_bohr_atom(Z: int, n: int, r_max: float = 3.0, decay_factor: float = 0.7):
+def plot_bohr_atom(atom, n: int, mode: str = 'scaled'):
     """
-    Grafica un átomo tipo Bohr en el plano con contorno y signos en protones y electrones.
-    
+    Plots a schematic Bohr-type atom with a nucleus and electron orbits.
+
     Args:
-        Z (int): Número de protones en el núcleo.
-        n_levels (int): Número de niveles electrónicos a dibujar.
-        r_max (float): Radio máximo para el nivel más externo.
-        decay_factor (float): Factor de decaimiento geométrico de los radios (0 < decay_factor < 1).
+        atom: An instance of the BohrAtom class.
+        n (int): The principal quantum number of the outermost electron.
+        mode (str): The plotting mode. Can be 'scaled' for physically
+                    accurate radii or 'schematic' for evenly spaced orbits.
     """
-    fig, ax = plt.subplots(figsize=(6, 6))
-    
-    # Dibujar protones (pepas) con contorno y signo "+"
-    theta_nucleus = np.linspace(0, 2*np.pi, Z, endpoint=False)
-    r_nucleus = 0.15
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError("The quantum number n must be a positive integer.")
+    if mode not in ['scaled', 'schematic']:
+        raise ValueError("Mode must be either 'scaled' or 'schematic'.")
+
+    Z = atom.Z
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    # --- Draw Nucleus ---
+    proton_locations = np.linspace(0, 2 * np.pi, Z, endpoint=False)
+    # Use the first Bohr radius as a reference for nucleus size
+    first_radius = calculations.calculate_orbit_radius(atom, 1)
+    nucleus_radius = 0.1 * first_radius
     for i in range(Z):
-        x = r_nucleus * np.cos(theta_nucleus[i])
-        y = r_nucleus * np.sin(theta_nucleus[i])
+        x = nucleus_radius * np.cos(proton_locations[i])
+        y = nucleus_radius * np.sin(proton_locations[i])
         ax.plot(x, y, 'o', color='red', markersize=12, markeredgecolor='black', markeredgewidth=1.5)
         ax.text(x, y, "+", color='white', fontsize=8, ha='center', va='center', fontweight='bold')
 
-    # Calcular radios de los niveles con decaimiento geométrico
-    radii = [r_max * (decay_factor ** (n - i)) for i in range(1, n+1)]
-    
-    # Dibujar niveles
+    # --- Determine Radii based on Mode ---
+    if mode == 'scaled':
+        # Physically accurate radii (r ∝ n^2)
+        radii = [calculations.calculate_orbit_radius(atom, i) for i in range(1, n + 1)]
+        title = f"Bohr Model (Z={Z}, n={n}) - Scaled Radii"
+    else: # mode == 'schematic'
+        # Illustrative, evenly spaced radii (r ∝ n)
+        last_radius = calculations.calculate_orbit_radius(atom, n)
+        # Create n evenly spaced points from the first radius to the last
+        radii = np.linspace(first_radius, last_radius, n)
+        title = f"Bohr Model (Z={Z}, n={n}) - Schematic (Not to Scale)"
+
+    # --- Draw Orbits and Electron ---
     for r in radii:
         circle = plt.Circle((0, 0), r, color='gray', fill=False, linestyle='--')
         ax.add_artist(circle)
-        
-    # Colocar un electrón solo en el último nivel con signo "-"
-    x_e = radii[-1] * np.cos(np.pi / 4)
-    y_e = radii[-1] * np.sin(np.pi / 4)
-    ax.plot(x_e, y_e, 'o', color='blue', markersize=10, markeredgecolor='black', markeredgewidth=1.5)
-    ax.text(x_e, y_e, "-", color='white', fontsize=8, ha='center', va='center', fontweight='bold')
 
+    electron_radius = radii[-1]
+    ax.plot(electron_radius, 0, 'o', color='blue', markersize=10, markeredgecolor='black', markeredgewidth=1.5)
+    ax.text(electron_radius, 0, "-", color='white', fontsize=10, ha='center', va='center', fontweight='bold')
+
+    # --- Final Plot Configuration ---
+    max_radius = radii[-1]
     ax.set_aspect('equal', 'box')
-    ax.set_xlim(-r_max-0.5, r_max+0.5)
-    ax.set_ylim(-r_max-0.5, r_max+0.5)
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_title(f"Átomo tipo Bohr con Z={Z} y {n_levels} niveles")
+    ax.set_xlim(-max_radius * 1.2, max_radius * 1.2)
+    ax.set_ylim(-max_radius * 1.2, max_radius * 1.2)
+    ax.set_xlabel("x (meters)")
+    ax.set_ylabel("y (meters)")
+    ax.set_title(title)
+    ax.grid(True, linestyle=':')
     plt.show()
 
-
-def energy_transition_diagram(atom, n_i, n_f, Z=None):
-    """
-    Dibuja un diagrama de niveles de energía y una transición entre dos niveles.
-
-    Args:
-        atom: objeto que contiene el método energy_level
-        n_i (int): nivel inicial
-        n_f (int): nivel final
-        Z (int, opcional): número atómico
-    """
-    # Asegurar que Z sea consistente
-    Z_used = Z if Z is not None else getattr(atom, "Z", 1)
-    
-    # Calcular energía de todos los niveles hasta el máximo de n_i y n_f
-    n_max = max(n_i, n_f)
-    levels = []
-    for n in range(1, n_max + 1):
-        E = atom.energy_level(n=n, Z=Z_used)
-        levels.append(E)
-    
-    # Dibujar niveles
-    fig, ax = plt.subplots(figsize=(4, 6))
-    for n, E in enumerate(levels, start=1):
-        ax.hlines(E, xmin=0, xmax=1, color='blue')
-        ax.text(1.05, E, f"n={n}", va='center')
-
-    # Dibujar flecha de transición
-    E_i = atom.energy_level(n=n_i, Z=Z_used)
-    E_f = atom.energy_level(n=n_f, Z=Z_used)
-    ax.annotate(
-        '', xy=(0.5, E_f), xytext=(0.5, E_i),
-        arrowprops=dict(facecolor='red', shrink=0.05, width=2, headwidth=8)
-    )
-
-    # Calcular energía de transición
-    energy_transition = abs(E_f - E_i)  # en joules
-    ax.text(0.55, (E_i + E_f)/2, f"{energy_transition:.2e} J", color='red', va='center')
-
-    # Configuración del gráfico
+def plot_energy_transition(atom, n_initial: int, n_final: int):
+    n_max = max(n_initial, n_final, 5)
+    levels = [calculations.calculate_energy_level(atom, n, unit='eV') for n in range(1, n_max + 1)]
+    fig, ax = plt.subplots(figsize=(5, 7))
+    for n, energy_ev in enumerate(levels, start=1):
+        ax.hlines(energy_ev, xmin=0, xmax=1, color='b', alpha=0.7)
+        ax.text(1.05, energy_ev, f"n={n}", va='center', ha='left')
+    E_initial = calculations.calculate_energy_level(atom, n_initial, unit='eV')
+    E_final = calculations.calculate_energy_level(atom, n_final, unit='eV')
+    transition_energy = abs(E_final - E_initial)
+    color = 'red' if n_initial > n_final else 'green'
+    ax.annotate("", xy=(0.5, E_final), xytext=(0.5, E_initial),
+                arrowprops=dict(facecolor=color, shrink=0.05, width=2, headwidth=8))
+    ax.text(0.45, (E_initial + E_final) / 2, f"ΔE = {transition_energy:.2f} eV",
+            color=color, va='center', ha='right')
     ax.set_xlim(0, 1.5)
-    ax.set_xlabel('Átomo Z={}'.format(Z_used))
-    ax.set_ylabel('Energía (J)')
-    ax.set_title('Diagrama de Transición Electrónica')
     ax.set_xticks([])
+    ax.set_ylabel('Energy (eV)')
+    ax.set_title(f'Electronic Transition (Z={atom.Z})')
     plt.show()
