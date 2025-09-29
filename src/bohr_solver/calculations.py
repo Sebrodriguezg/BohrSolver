@@ -1,30 +1,30 @@
-def calculate_transition(atom, n_i=1, n_f=2):
-    atom.n_i = n_i
-    atom.n_f = n_f
+def calculate_energy_level(atom, n: int, unit: str = 'eV') -> float:
+    """
+    Calculates the energy of an electron in a given quantum level 'n'
+    using the Rydberg formula.
 
-    if atom.n_i == atom.n_f
-        return {"error": "el nivel inicial no puede ser igual al final."}
-    try:
-        # |1/n_f² - 1/n_i²|
-        term = abs((1 / atom.n_f**2) - (1 / atom.n_i**2))
+    Args:
+        atom: An instance of the BohrAtom class.
+        n (int): The principal quantum number (n > 0).
+        unit (str): The desired unit for the output energy ('eV' or 'J').
 
-        # Wavelength inverse (1/λ)
-        inv_wavelength = atom.R * (atom.z**2) * term
+    Returns:
+        float: The energy of the level in the specified unit.
+    """
+    if not isinstance(n, int) or n < 1:
+        raise ValueError("Principal quantum number n must be a positive integer.")
 
-        # Wavelength in meters
-        atom.wavelength = 1 / inv_wavelength
+    # Rigorous formula using the Rydberg constant defined in the atom object
+    # E_n = -R * h * c * (Z^2 / n^2)
+    energy_joules = -atom.R * atom.h * atom.c * (atom.Z**2 / n**2)
 
-        # Frequency (ν = c/λ)
-        atom.frequency = atom.c / atom.wavelength
-
-    except ZeroDivisionError:
-        return {"error": "Division per 0, review quantum levels"}
-    if atom.n_i > atom.n_f:
-        atom.transition_type = "Emission"
+    if unit.lower() == 'ev':
+        return energy_joules / atom.e
+    elif unit.lower() == 'j':
+        return energy_joules
     else:
-        atom.transition_type = "Absortion"
-    """
-    """
+        raise ValueError("Invalid unit. Please choose 'eV' or 'J'.")
+
 
 def calculate_orbit_radius(atom, n: int) -> float:
     """
@@ -39,28 +39,47 @@ def calculate_orbit_radius(atom, n: int) -> float:
     """
     if not isinstance(n, int) or n < 1:
         raise ValueError("Principal quantum number n must be a positive integer.")
-    
+
+    # Formula: r_n = (n^2 / Z) * a0
     return (n**2 / atom.Z) * atom.a0
 
-def energy_level(atom, n: int = 1, Z: int = None) -> float:
-    """
-    Calcula la energía del nivel n para un átomo con número atómico Z
-    usando la fórmula de Bohr para átomos tipo hidrógeno.
-    La energía se devuelve en joules (J).
 
-    E_n = -13.6 * Z^2 / n^2   (energía en eV, convertida a J)
+def calculate_transition(atom, n_initial: int, n_final: int) -> dict:
+    """
+    Calculates the properties of a photon emitted or absorbed during an
+    electronic transition using the Rydberg formula for wavelength.
 
     Args:
-        n (int, opcional): Número del nivel de energía (n >= 1). Por defecto 1.
-        Z (int, opcional): Número atómico del átomo. Por defecto se usa atom.Z o 1.
+        atom: An instance of the BohrAtom class.
+        n_initial (int): The initial principal quantum number (must be > 0).
+        n_final (int): The final principal quantum number (must be > 0).
 
     Returns:
-        float: Energía del nivel n en joules (J)
+        dict: A dictionary containing the photon's properties (wavelength,
+              frequency, energy, and transition type), or None if no
+              transition occurs.
     """
-    if n < 1:
-        raise ValueError("El número cuántico principal n debe ser >= 1")
-    
-    Z_used = Z if Z is not None else getattr(atom, "Z", 1)
-    energy_ev = -13.6 * (Z_used ** 2) / (n ** 2)  # energía en eV
-    energy_j = energy_ev * 1.602176634e-19         # conversión a J
-    return energy_j
+    if not (isinstance(n_initial, int) and n_initial > 0 and
+            isinstance(n_final, int) and n_final > 0):
+        raise ValueError("Quantum numbers n_initial and n_final must be positive integers.")
+
+    if n_initial == n_final:
+        return None
+
+    # Rydberg formula for the inverse wavelength: 1/λ = R * Z^2 * |1/n_f^2 - 1/n_i^2|
+    term = abs((1 / n_final**2) - (1 / n_initial**2))
+    inv_wavelength = atom.R * (atom.Z**2) * term
+
+    if inv_wavelength == 0: # Should not happen with valid n
+        return None
+
+    wavelength_m = 1 / inv_wavelength
+    frequency_hz = atom.c / wavelength_m
+    energy_j = atom.h * frequency_hz
+
+    return {
+        "wavelength_nm": wavelength_m * 1e9,
+        "frequency_Hz": frequency_hz,
+        "energy_eV": energy_j / atom.e,
+        "type": "Emission" if n_initial > n_final else "Absorption"
+    }
