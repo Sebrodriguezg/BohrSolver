@@ -19,11 +19,16 @@ The library is designed to be intuitive, providing a class-based interface (`Boh
 ---
 
 ## Installation
-
-You can install the library locally by cloning the repository and installing dependencies:
+You can install the library using pip:
 
 ```bash
-git clone <your-repo-url>
+pip install bohr-solver
+```
+
+Or install the library locally by cloning the repository and installing dependencies:
+
+```bash
+git clone https://github.com/Sebrodriguezg/BohrSolver.git
 cd BohrSolver
 pip install -e .
 ```
@@ -121,4 +126,12 @@ atom.plot_energy_transition(3, 1)
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## Authors
+
+- Sebastian Rodriguez Garcia, sebrodriguezg@udistrital.edu.co
+- Julian Leonardo Avila Martinez, jlavilam@udistrital.edu.co
+- Camilo Andres Huertas Archila, cahuertasa@udistrital.edu.co
 
